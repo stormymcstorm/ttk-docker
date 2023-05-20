@@ -12,7 +12,7 @@ jobs:
   build:
     strategy:
       matrix:
-        images: ["vtk"]
+        images: ["vtk", "vtk-python", "ttk", "ttk-python"]
 
     runs-on: ubuntu-latest
     permissions:
