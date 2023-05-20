@@ -117,7 +117,7 @@ RUN apt-get update \
     libprotobuf-dev         \
     libpugixml-dev          \
     libsqlite3-dev          \
-    libgraphviz-dev	    \
+    libgraphviz-dev	        \
     libtheora-dev           \
     libtiff-dev             \
     libxml2-dev             \
@@ -248,7 +248,7 @@ RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_
 ################################################################################
 # TTK PYTHON
 # ----------
-# 
+# An image containing a TTK installation and the python bindings
 ################################################################################
 
 FROM python:$PY_VARIANT as ttk-python
