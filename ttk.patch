@@ -1,0 +1,13 @@
+diff --git a/core/vtk/ttkAlgorithm/vtk.module b/core/vtk/ttkAlgorithm/vtk.module
+index 98813ac72..1f5d7e2ab 100644
+--- a/core/vtk/ttkAlgorithm/vtk.module
++++ b/core/vtk/ttkAlgorithm/vtk.module
+@@ -3,5 +3,4 @@ NAME
+ DEPENDS
+   VTK::FiltersCore
+ PRIVATE_DEPENDS
+-  VTK::CommonCore
+-  VTK::FiltersParallelDIY2
+\ No newline at end of file
++  VTK::CommonCore
+\ No newline at end of file
