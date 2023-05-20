@@ -10,6 +10,10 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        vtk-version: ["9.2.6"]
+        images: ["vtk"]
 
     runs-on: ubuntu-latest
     permissions:
@@ -27,3 +31,12 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          push: true
+          tags: latest
+      
+    
