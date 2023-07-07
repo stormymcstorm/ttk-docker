@@ -47,7 +47,7 @@ jobs:
           context: .
           push: true
           target: vtk
-          tags: "${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk:${matrix.vtk_version}"
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk:${matrix.vtk_version}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache, mode=max
       
