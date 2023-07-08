@@ -1,5 +1,4 @@
-ARG VARIANT=bullseye-slim
-ARG PY_VARIANT=3.9-slim-bullseye
+ARG PYTHON_VERSION=3.9
 
 ################################################################################
 # BASE BUILDER
@@ -158,7 +157,7 @@ RUN mkdir -p /build/ttk  \
 # An image containing a VTK installation
 ################################################################################
 
-FROM debian:$VARIANT as vtk
+FROM debian:bullseye-slim as vtk
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
@@ -186,7 +185,7 @@ RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_
 # An image containing a VTK installation and the python wrapper
 ################################################################################
 
-FROM python:$PY_VARIANT as vtk-python
+FROM python:${PYTHON_VERSION}-slim-bullseye as vtk-python
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
@@ -199,15 +198,16 @@ COPY --from=builder-vtk /usr/local/include/vtk /usr/local/include/vtk
 COPY --from=builder-vtk /usr/local/lib/vtk /usr/local/lib/vtk
 COPY --from=builder-vtk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
 COPY --from=builder-vtk /usr/local/lib/libvtk* /usr/local/lib/
-# TODO: find a way to not hardcode "python3.9"
-COPY --from=builder-vtk /usr/local/lib/python3.9/site-packages/vtkmodules /usr/local/lib/python3.9/site-packages/vtkmodules
-COPY --from=builder-vtk /usr/local/lib/python3.9/site-packages/vtk.py /usr/local/lib/python3.9/site-packages/vtk.py
+COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules \
+  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules
+COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py \
+  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py
 
 COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
 
 COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
 
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.9/site-packages/
+ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PYTHON_VERSION}/site-packages/
 
 ################################################################################
 # TTK
@@ -215,7 +215,7 @@ ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.9/site-packages/
 # An image containing a TTK installation
 ################################################################################
 
-FROM debian:$VARIANT as ttk
+FROM debian:bullseye-slim as ttk
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
@@ -251,7 +251,7 @@ RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_
 # An image containing a TTK installation and the python bindings
 ################################################################################
 
-FROM python:$PY_VARIANT as ttk-python
+FROM python:${PYTHON_VERSION}-slim-bullseye as ttk-python
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
@@ -271,10 +271,12 @@ COPY --from=builder-ttk /usr/local/lib/cmake/ttkVTK /usr/local/lib/cmake/ttkVTK
 COPY --from=builder-ttk /usr/local/lib/libvtk* /usr/local/lib/
 COPY --from=builder-ttk /usr/local/lib/libttk* /usr/local/lib/
 
-# TODO: find a way to not hardcode "python3.9"
-COPY --from=builder-ttk /usr/local/lib/python3.9/site-packages/vtkmodules /usr/local/lib/python3.9/site-packages/vtkmodules
-COPY --from=builder-ttk /usr/local/lib/python3.9/site-packages/vtk.py /usr/local/lib/python3.9/site-packages/vtk.py
-COPY --from=builder-ttk /usr/local/lib/python3.9/site-packages/topologytoolkit /usr/local/lib/python3.9/site-packages/topologytoolkit
+COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules \
+  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules
+COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py \
+  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py
+COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/topologytoolkit \
+  /usr/local/lib/python${PYTHON_VERSION}/site-packages/topologytoolkit
 
 COPY --from=builder-ttk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
 
@@ -282,7 +284,7 @@ COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
 
 COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
 
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.9/site-packages/
+ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PYTHON_VERSION}/site-packages/
 
 ################################################################################
 # VTK TEST
