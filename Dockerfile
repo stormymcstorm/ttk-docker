@@ -57,7 +57,8 @@ FROM builder-base as builder-vtk
 ARG VTK_VERSION=9.2.6
 
 RUN mkdir -p /src/vtk && cd /src/vtk \
-  && curl -kL https://www.vtk.org/files/release/9.2/VTK-${VTK_VERSION}.tar.gz | tar zx --strip-components 1
+  && VTK_VERSION_SHORT=$(echo ${VTK_VERSION} | cut -d. -f1-2) \
+  && curl -kL https://www.vtk.org/files/release/${VTK_VERSION_SHORT}/VTK-${VTK_VERSION}.tar.gz | tar zx --strip-components 1
 
 # Build and install vtk
 
