@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         vtk_version:
-          - 8.2.0
           - 9.2.6
 
     runs-on: ubuntu-latest
