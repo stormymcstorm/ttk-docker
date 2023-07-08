@@ -27,7 +27,8 @@ RUN apt-get update \
     libosmesa6-dev \
     freeglut3-dev \
     libboost-system-dev \
-    python3-dev
+    python3-dev \
+    python2-dev 
 
 # Install some utilities that make debugging builds easier
 RUN apt-get update \
