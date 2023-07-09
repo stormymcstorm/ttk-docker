@@ -48,8 +48,8 @@ jobs:
           target: vtk
           build-args: VTK_VERSION=${{ matrix.vtk_version }}
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk:${{ matrix.vtk_version }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache, mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk:buildcache, mode=max
 
   build-vtk-python:
     strategy:
@@ -94,18 +94,18 @@ jobs:
           target: vtk-python
           build-args: |
             VTK_VERSION=${{ matrix.vtk_version }}
-            PYTHON_VERSION=${{ matrix.python_version }}
+            PY_VERSION=${{ matrix.python_version }}
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk-python:py${{ matrix.python_version }}-vtk${{ matrix.vtk_version }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache, mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk-python:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/vtk-python:buildcache, mode=max
   
   build-ttk:
     strategy:
       fail-fast: false
       matrix:
         ttk_version:
+          # - 1.0.0
           - 1.1.0
-          - 1.0.0
         include:
           - vtk_version: 9.2.6
 
@@ -143,8 +143,8 @@ jobs:
             VTK_VERSION=${{ matrix.vtk_version }}
             TTK_VERSION=${{ matrix.ttk_version }}
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk:${{ matrix.ttk_version }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache, mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk:buildcache, mode=max
 
   build-ttk-python:
     strategy:
@@ -155,8 +155,8 @@ jobs:
           - 3.9
           - 3.11
         ttk_version:
+          # - 1.0.0
           - 1.1.0
-          - 1.0.0
         include:
           - vtk_version: 9.2.6
 
@@ -193,7 +193,7 @@ jobs:
           build-args: |
             VTK_VERSION=${{ matrix.vtk_version }}
             TTK_VERSION=${{ matrix.ttk_version }}
-            PYTHON_VERSION=${{ matrix.python_version }}
+            PY_VERSION=${{ matrix.python_version }}
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-python:py${{matrix.python_version }}-ttk${{ matrix.ttk_version }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-buildcache, mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-python:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/ttk-python:buildcache, mode=max

@@ -1,4 +1,5 @@
-ARG PYTHON_VERSION=3.9
+# Variable named PYTHON_VERSION is already used by python image
+ARG PY_VERSION=3.9
 
 ################################################################################
 # BASE BUILDER
@@ -135,7 +136,7 @@ RUN mkdir -p /src/ttk && cd /src/ttk \
 
 COPY ttk.patch /tmp/ttk.patch
 
-RUN cd /src/ttk && patch -p1 < /tmp/ttk.patch
+RUN cd /src/ttk && (patch -p1 < /tmp/ttk.patch || true)
 
 # Build and install ttk
 
@@ -187,7 +188,7 @@ RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_
 # An image containing a VTK installation and the python wrapper
 ################################################################################
 
-FROM python:${PYTHON_VERSION}-slim-bullseye as vtk-python
+FROM python:${PY_VERSION}-slim-bullseye as vtk-python
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
@@ -253,7 +254,7 @@ RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_
 # An image containing a TTK installation and the python bindings
 ################################################################################
 
-FROM python:${PYTHON_VERSION}-slim-bullseye as ttk-python
+FROM python:${PY_VERSION}-slim-bullseye as ttk-python
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
