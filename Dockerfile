@@ -1,4 +1,4 @@
-# Variable named PYTHON_VERSION is already used by python image
+# Variable named PY_VERSION is already used by python image
 ARG PY_VERSION=3.9
 
 ################################################################################
@@ -201,16 +201,16 @@ COPY --from=builder-vtk /usr/local/include/vtk /usr/local/include/vtk
 COPY --from=builder-vtk /usr/local/lib/vtk /usr/local/lib/vtk
 COPY --from=builder-vtk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
 COPY --from=builder-vtk /usr/local/lib/libvtk* /usr/local/lib/
-COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules
-COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py
+COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
+  /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
+COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
+  /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
 
 COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
 
 COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
 
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PYTHON_VERSION}/site-packages/
+ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
 
 ################################################################################
 # TTK
@@ -274,12 +274,12 @@ COPY --from=builder-ttk /usr/local/lib/cmake/ttkVTK /usr/local/lib/cmake/ttkVTK
 COPY --from=builder-ttk /usr/local/lib/libvtk* /usr/local/lib/
 COPY --from=builder-ttk /usr/local/lib/libttk* /usr/local/lib/
 
-COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules
-COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py
-COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/topologytoolkit \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/topologytoolkit
+COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
+  /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
+COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
+  /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
+COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit \
+  /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit
 
 COPY --from=builder-ttk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
 
@@ -287,7 +287,7 @@ COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
 
 COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
 
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PYTHON_VERSION}/site-packages/
+ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
 
 ################################################################################
 # VTK TEST
