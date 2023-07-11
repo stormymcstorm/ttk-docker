@@ -7,7 +7,7 @@ ARG PY_VERSION=3.9
 # base image containing the dependencies and setup for later build stages
 ################################################################################
 
-FROM debian:bullseye-slim as builder-base
+FROM python:${PY_VERSION}-slim-bullseye as builder-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -27,9 +27,7 @@ RUN apt-get update \
     mesa-utils \
     libosmesa6-dev \
     freeglut3-dev \
-    libboost-system-dev \
-    python3-dev \
-    python2-dev 
+    libboost-system-dev 
 
 # Install some utilities that make debugging builds easier
 RUN apt-get update \
@@ -190,6 +188,7 @@ RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_
 
 FROM python:${PY_VERSION}-slim-bullseye as vtk-python
 
+
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
     libosmesa6-dev \
@@ -201,14 +200,16 @@ COPY --from=builder-vtk /usr/local/include/vtk /usr/local/include/vtk
 COPY --from=builder-vtk /usr/local/lib/vtk /usr/local/lib/vtk
 COPY --from=builder-vtk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
 COPY --from=builder-vtk /usr/local/lib/libvtk* /usr/local/lib/
+COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
+COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
+
+ARG PY_VERSION
 COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
   /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
 COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
   /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
 
-COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
 
-COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
 
 ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
 
@@ -273,7 +274,11 @@ COPY --from=builder-ttk /usr/local/lib/cmake/ttkBase /usr/local/lib/cmake/ttkBas
 COPY --from=builder-ttk /usr/local/lib/cmake/ttkVTK /usr/local/lib/cmake/ttkVTK
 COPY --from=builder-ttk /usr/local/lib/libvtk* /usr/local/lib/
 COPY --from=builder-ttk /usr/local/lib/libttk* /usr/local/lib/
+COPY --from=builder-ttk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
+COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
+COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
 
+ARG PY_VERSION
 COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
   /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
 COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
@@ -281,11 +286,6 @@ COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py 
 COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit \
   /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit
 
-COPY --from=builder-ttk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
-
-COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
-
-COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
 
 ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
 
