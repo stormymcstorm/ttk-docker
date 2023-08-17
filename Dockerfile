@@ -48,6 +48,7 @@ RUN apt-get update \
 #  - /usr/local/share/licenses/VTK/**/*
 #  - /usr/local/share/vtk/**/*
 #  - /usr/local/bin/vtk*
+#  - /dist/vtk-wheel/*.whl
 ################################################################################
 
 FROM builder-base as builder-vtk
@@ -74,6 +75,20 @@ RUN mkdir -p /build/vtk \
     -DVTK_GROUP_ENABLE_Web:STRING=WANT \
   && cmake --build /build/vtk \
   && cmake --install /build/vtk
+
+RUN mkdir -p /build/vtk-wheel \
+  && cmake -B /build/vtk-wheel -S /src/vtk \
+    -DVTK_USE_X=OFF \
+    -DVTK_OPENGL_HAS_OSMESA=ON \
+    -DVTK_BUILD_PYI_FILES=ON \ 
+    -DVTK_ENABLE_WRAPPING=ON \
+    -DVTK_WRAP_PYTHON=ON \
+    -DVTK_WHEEL_BUILD=ON \
+  && cmake --build /build/vtk-wheel
+
+RUN mkdir -p /dist/vtk-wheel \
+  && cd /build/vtk-wheel \
+  && python3 setup.py bdist_wheel --dist-dir /dist/vtk-wheel
 
 ################################################################################
 # TTK BUILDER
@@ -204,13 +219,14 @@ COPY --from=builder-vtk /usr/local/lib/libvtk* /usr/local/lib/
 COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
 COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
 
-ARG PY_VERSION
-COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
-  /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
-COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
-  /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
+# ARG PY_VERSION
+# COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
+#   /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
+# COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
+#   /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
 
-
+COPY --from=builder-vtk /dist/vtk-wheel /dist/vtk-wheel
+RUN pip install /dist/vtk-wheel/*.whl
 
 ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
 
@@ -280,12 +296,15 @@ COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
 COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
 
 ARG PY_VERSION
-COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
-  /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
-COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
-  /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
+# COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
+#   /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
+# COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
+#   /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
 COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit \
   /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit
+
+COPY --from=builder-vtk /dist/vtk-wheel /dist/vtk-wheel
+RUN pip install /dist/vtk-wheel/*.whl
 
 
 ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
