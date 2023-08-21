@@ -1,13 +1,13 @@
-# Variable named PY_VERSION is already used by python image
-ARG PY_VERSION=3.9
+ARG PYTHON_VERSION=3.9
+
+ARG VTK_VERSION=9.2.6
+ARG VTK_BUILD_ARGS=-DVTK_USE_X=OFF -DVTK_BUILD_PYI_FILES=ON
 
 ################################################################################
 # BASE BUILDER
-# ------------
-# base image containing the dependencies and setup for later build stages
 ################################################################################
 
-FROM python:${PY_VERSION}-slim-bullseye as builder-base
+FROM python:${PYTHON_VERSION}-slim-bullseye as builder-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -29,69 +29,81 @@ RUN apt-get update \
     freeglut3-dev \
     libboost-system-dev 
 
-# Install some utilities that make debugging builds easier
-RUN apt-get update \
-  && apt-get install --no-install-recommends -yqq \
-    cmake-curses-gui
-
 ################################################################################
-# VTK BUILDER
+# BUILDER VTK
 # -----------
 # stage responsible for building VTK.
 # vtk installation is comprised of the following files:
 #  - /usr/local/include/vtk/**/*
 #  - /usr/local/lib/vtk/**/*
+#  - /usr/local/lib/python*/site-packages/vtk.py
+#  - /usr/local/lib/python*/site-packages/vtkmodules
 #  - /usr/local/lib/libvtk*
 #  - /usr/local/lib/cmake/vtk/**/*
-#  - /usr/local/lib/python3.9/site-packages/vtkmodules/**/* (python)
-#  - /usr/local/lib/python3.9/site-packages/vtk.py          (python)
 #  - /usr/local/share/licenses/VTK/**/*
 #  - /usr/local/share/vtk/**/*
 #  - /usr/local/bin/vtk*
-#  - /dist/vtk-wheel/*.whl
 ################################################################################
 
 FROM builder-base as builder-vtk
 
-# Download sources
+ARG VTK_VERSION
+ARG VTK_BUILD_ARGS
 
-ARG VTK_VERSION=9.2.6
-
-RUN mkdir -p /src/vtk && cd /src/vtk \
-  && VTK_VERSION_SHORT=$(echo ${VTK_VERSION} | cut -d. -f1-2) \
+# Download source
+RUN VTK_VERSION_SHORT=$(echo ${VTK_VERSION} | cut -d. -f1-2) \
+  && mkdir -p /src/vtk && cd /src/vtk \
   && curl -kL https://www.vtk.org/files/release/${VTK_VERSION_SHORT}/VTK-${VTK_VERSION}.tar.gz | tar zx --strip-components 1
 
-# Build and install vtk
-
+# Build and install
 RUN mkdir -p /build/vtk \
   # https://github.com/Kitware/VTK/blob/master/Documentation/dev/build.md#optional-additions
   && cmake -B /build/vtk -S /src/vtk \
-    -DVTK_USE_X=OFF \
     -DVTK_OPENGL_HAS_OSMESA=ON \
-    -DVTK_BUILD_PYI_FILES=ON \ 
+    -DVTK_VERSIONED_INSTALL=OFF \
     -DVTK_ENABLE_WRAPPING=ON \
     -DVTK_WRAP_PYTHON=ON \
-    -DVTK_VERSIONED_INSTALL=OFF \
-    -DVTK_GROUP_ENABLE_Web:STRING=WANT \
+    ${VTK_BUILD_ARGS} \
   && cmake --build /build/vtk \
   && cmake --install /build/vtk
 
-RUN mkdir -p /build/vtk-wheel \
-  && cmake -B /build/vtk-wheel -S /src/vtk \
-    -DVTK_USE_X=OFF \
+################################################################################
+# BUILDER VTK PYTHON
+# ------------------
+# stage responsible for building VTK python wheel.
+# Image contains the following artifacts
+#  - /dist/vtk-wheel/*.whl
+################################################################################
+
+FROM builder-base as builder-vtk-python
+
+ARG VTK_VERSION
+ARG VTK_BUILD_ARGS
+
+# Download source
+RUN VTK_VERSION_SHORT=$(echo ${VTK_VERSION} | cut -d. -f1-2) \
+  && mkdir -p /src/vtk && cd /src/vtk \
+  && curl -kL https://www.vtk.org/files/release/${VTK_VERSION_SHORT}/VTK-${VTK_VERSION}.tar.gz | tar zx --strip-components 1
+
+# Build
+RUN mkdir -p /build/vtk \
+  # https://github.com/Kitware/VTK/blob/master/Documentation/dev/build.md#optional-additions
+  && cmake -B /build/vtk -S /src/vtk \
     -DVTK_OPENGL_HAS_OSMESA=ON \
-    -DVTK_BUILD_PYI_FILES=ON \ 
+    -DVTK_VERSIONED_INSTALL=OFF \
     -DVTK_ENABLE_WRAPPING=ON \
     -DVTK_WRAP_PYTHON=ON \
     -DVTK_WHEEL_BUILD=ON \
-  && cmake --build /build/vtk-wheel
+    ${VTK_BUILD_ARGS} \
+  && cmake --build /build/vtk 
 
 RUN mkdir -p /dist/vtk-wheel \
   && cd /build/vtk-wheel \
   && python3 setup.py bdist_wheel --dist-dir /dist/vtk-wheel
 
 ################################################################################
-# TTK BUILDER
+# BUILDER TTK
+# -----------
 # stage responsible for building TTK.
 # ttk installation is comprised of the following files:
 #  - /usr/local/include/vtk/**/*
@@ -103,16 +115,14 @@ RUN mkdir -p /dist/vtk-wheel \
 #  - /usr/local/lib/cmake/ttkBase/**/*
 #  - /usr/local/lib/cmake/ttkVTK/**/*
 #  - /usr/local/lib/cmake/ttkPython/**/*
-#  - /usr/local/lib/python3.9/site-packages/vtkmodules/**/*       (python)
-#  - /usr/local/lib/python3.9/site-packages/topologytoolkit/**/*  (python)
-#  - /usr/local/lib/python3.9/site-packages/vtk.py                (python)
 #  - /usr/local/share/licenses/VTK/**/*
 #  - /usr/local/share/vtk/**/*
 #  - /usr/local/scripts/ttk/**/*
 #  - /usr/local/bin/vtk*
+#  - /dist/ttk-wheel/*.whl
 ################################################################################
 
-FROM builder-vtk as builder-ttk
+FROM builder-base as builder-ttk
 
 # Download build dependencies
 RUN apt-get update \
@@ -141,20 +151,36 @@ RUN apt-get update \
     python3-numpy-dev       \
     zlib1g-dev
 
-# Download sources
+# Copy VTK installation from builder-vtk
+COPY --from=builder-vtk /usr/local/include/vtk /usr/local/include/vtk
+COPY --from=builder-vtk /usr/local/lib/vtk /usr/local/lib/vtk
+COPY --from=builder-vtk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
+COPY --from=builder-vtk /usr/local/lib/libvtk* /usr/local/lib/
+COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
+COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
+
+ARG PYTHON_VERSION
+COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules \
+  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules
+COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py \
+  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py
 
 ARG TTK_VERSION=1.1.0
+ARG TTK_BUILD_ARGS=""
 
+# Download sources
 RUN mkdir -p /src/ttk && cd /src/ttk \
   && curl -kL https://github.com/topology-tool-kit/ttk/archive/${TTK_VERSION}.tar.gz | tar zx --strip-components 1
 
-COPY ttk.patch /tmp/ttk.patch
+# Patch if necessary
+COPY ttk-patches /tmp/ttk-patches
 
-RUN cd /src/ttk && (patch -p1 < /tmp/ttk.patch || true)
+RUN if test -e /tmp/ttk-patches/ttk.${TTK_VERSION}.patch; then \
+    cd /src/ttk && patch -p1 < /tmp/ttk-patches/ttk.${TTK_VERSION}.patch; \
+  fi
 
-# Build and install ttk
-
-RUN mkdir -p /build/ttk  \
+# Build and install
+RUN mkdir -p /build/ttk \
   && cmake -B /build/ttk -S /src/ttk \
     -DTTK_BUILD_PARAVIEW_PLUGINS=OFF \
     -DTTK_BUILD_STANDALONE_APPS=OFF \
@@ -165,13 +191,18 @@ RUN mkdir -p /build/ttk  \
     -DTTK_BUILD_DOCUMENTATION=OFF \
     -DVTK_MODULE_ENABLE_ttkWebSocketIO=NO \
     -DTTK_ENABLE_KAMIKAZE=ON \
+    ${TTK_BUILD_ARGS} \
   && cmake --build /build/ttk \
-  && cmake --install /build/ttk 
+  && cmake --install /build/ttk
 
+# Setup package for topology toolkit
+RUN mkdir -p /dist/ttk-wheel \
+  && cd /build/ttk/lib/python*/site-packages \
+  && echo "from setuptools import setup; setup(name='topologytoolkit', version='${TTK_VERSION}', packages=['topologytoolkit'])" > setup.py \
+  && python setup.py bdist_wheel --dist-dir /dist/ttk-wheel
+  
 ################################################################################
-# VTK 
-# ------------------------------------------
-# An image containing a VTK installation
+# VTK
 ################################################################################
 
 FROM debian:bullseye-slim as vtk
@@ -180,16 +211,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
     libosmesa6-dev \
   && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-    
-# Copy vtk installation from builder-vtk
-COPY --from=builder-vtk /usr/local/include/vtk /usr/local/include/vtk
 
+# Copy VTK installation from builder-vtk
+COPY --from=builder-vtk /usr/local/include/vtk /usr/local/include/vtk
 COPY --from=builder-vtk /usr/local/lib/vtk /usr/local/lib/vtk
 COPY --from=builder-vtk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
 COPY --from=builder-vtk /usr/local/lib/libvtk* /usr/local/lib/
-
 COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
-
 COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
 
 # Modify cmake configuration to not use python
@@ -197,43 +225,7 @@ RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_
   /usr/local/lib/cmake/vtk/vtk-config.cmake
 
 ################################################################################
-# VTK PYTHON
-# ----------
-# An image containing a VTK installation and the python wrapper
-################################################################################
-
-FROM python:${PY_VERSION}-slim-bullseye as vtk-python
-
-
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-  && apt-get install --no-install-recommends -yqq \
-    libosmesa6-dev \
-  && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-    
-# Copy vtk installation from builder-vtk
-COPY --from=builder-vtk /usr/local/include/vtk /usr/local/include/vtk
-
-COPY --from=builder-vtk /usr/local/lib/vtk /usr/local/lib/vtk
-COPY --from=builder-vtk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
-COPY --from=builder-vtk /usr/local/lib/libvtk* /usr/local/lib/
-COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
-COPY --from=builder-vtk /usr/local/bin/vtk* /usr/local/bin/
-
-# ARG PY_VERSION
-# COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
-#   /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
-# COPY --from=builder-vtk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
-#   /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
-
-COPY --from=builder-vtk /dist/vtk-wheel /dist/vtk-wheel
-RUN pip install /dist/vtk-wheel/*.whl
-
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
-
-################################################################################
 # TTK
-# ---
-# An image containing a TTK installation
 ################################################################################
 
 FROM debian:bullseye-slim as ttk
@@ -241,38 +233,45 @@ FROM debian:bullseye-slim as ttk
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
     libosmesa6-dev \
-    libgomp1 \
-    libgraphviz-dev \
   && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-    
-# Copy vtk installation from builder-vtk
-COPY --from=builder-ttk /usr/local/include/vtk /usr/local/include/vtk
-COPY --from=builder-ttk /usr/local/include/ttk /usr/local/include/ttk
 
+# Copy VTK installation from builder-ttk
+COPY --from=builder-ttk /usr/local/include/vtk /usr/local/include/vtk
 COPY --from=builder-ttk /usr/local/lib/vtk /usr/local/lib/vtk
 COPY --from=builder-ttk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
+COPY --from=builder-ttk /usr/local/lib/libvtk* /usr/local/lib/
+COPY --from=builder-ttk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
+COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
+
+# Copy TTK installation from builder-ttk
+COPY --from=builder-ttk /usr/local/include/ttk /usr/local/include/ttk
 COPY --from=builder-ttk /usr/local/lib/cmake/ttkBase /usr/local/lib/cmake/ttkBase
 COPY --from=builder-ttk /usr/local/lib/cmake/ttkVTK /usr/local/lib/cmake/ttkVTK
-COPY --from=builder-ttk /usr/local/lib/libvtk* /usr/local/lib/
 COPY --from=builder-ttk /usr/local/lib/libttk* /usr/local/lib/
-
-COPY --from=builder-ttk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
-
 COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
-
-COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
 
 # Modify cmake configuration to not use python
 RUN sed -i 's/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "ON")/set("\${CMAKE_FIND_PACKAGE_NAME}_WRAP_PYTHON" "OFF")/' \
   /usr/local/lib/cmake/vtk/vtk-config.cmake
 
 ################################################################################
-# TTK PYTHON
-# ----------
-# An image containing a TTK installation and the python bindings
+# VTK PYTHON
 ################################################################################
 
-FROM python:${PY_VERSION}-slim-bullseye as ttk-python
+FROM python:${PYTHON_VERSION}-slim-bullseye as vtk-python
+
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+  && apt-get install --no-install-recommends -yqq \
+    libosmesa6-dev \
+  && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder-vtk-python /dist/vtk-wheel /dist/vtk-wheel
+RUN pip install /dist/vtk-wheel/*.whl && rm -rf /dist/vtk-wheel
+
+################################################################################
+# TTK PYTHON
+################################################################################
+FROM python:${PYTHON_VERSION}-slim-bullseye as ttk-python
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -yqq \
@@ -280,55 +279,9 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     libgomp1 \
     libgraphviz-dev \
   && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-    
-# Copy vtk installation from builder-vtk
-COPY --from=builder-ttk /usr/local/include/vtk /usr/local/include/vtk
-COPY --from=builder-ttk /usr/local/include/ttk /usr/local/include/ttk
 
-COPY --from=builder-ttk /usr/local/lib/vtk /usr/local/lib/vtk
-COPY --from=builder-ttk /usr/local/lib/cmake/vtk /usr/local/lib/cmake/vtk
-COPY --from=builder-ttk /usr/local/lib/cmake/ttkBase /usr/local/lib/cmake/ttkBase
-COPY --from=builder-ttk /usr/local/lib/cmake/ttkVTK /usr/local/lib/cmake/ttkVTK
-COPY --from=builder-ttk /usr/local/lib/libvtk* /usr/local/lib/
-COPY --from=builder-ttk /usr/local/lib/libttk* /usr/local/lib/
-COPY --from=builder-ttk /usr/local/share/licenses/VTK /usr/local/share/licenses/VTK
-COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
-COPY --from=builder-ttk /usr/local/bin/vtk* /usr/local/bin/
+COPY --from=builder-vtk-python /dist/vtk-wheel /dist/vtk-wheel
+RUN pip install /dist/vtk-wheel/*.whl && rm -rf /dist/vtk-wheel
 
-ARG PY_VERSION
-# COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules \
-#   /usr/local/lib/python${PY_VERSION}/site-packages/vtkmodules
-# COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py \
-#   /usr/local/lib/python${PY_VERSION}/site-packages/vtk.py
-COPY --from=builder-ttk /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit \
-  /usr/local/lib/python${PY_VERSION}/site-packages/topologytoolkit
-
-COPY --from=builder-vtk /dist/vtk-wheel /dist/vtk-wheel
-RUN pip install /dist/vtk-wheel/*.whl
-
-
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PY_VERSION}/site-packages/
-
-################################################################################
-# VTK TEST
-# --------
-# An image which tests that vtk was installed properly
-################################################################################
-
-FROM vtk as vtk-test
-
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-  && apt-get install --no-install-recommends -yqq \
-    curl \
-    nano \
-    ninja-build \
-    build-essential \
-    cmake \
-  && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /test && cd /test \
-  && curl -kL https://github.com/Kitware/vtk-examples/raw/gh-pages/Tarballs/Cxx/CylinderExample.tar | tar x --strip-components 1 \
-  && cmake . \
-  && make 
-
-CMD ["/bin/sh", "-c", "/test/CylinderExample && echo It works!"]
+COPY --from=builder-ttk /dist/ttk-wheel /dist/ttk-wheel
+RUN pip install /dist/ttk-wheel/*.whl && rm -rf /dist/ttk-wheel
