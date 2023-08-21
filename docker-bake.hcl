@@ -1,4 +1,0 @@
-
-target "vtk" {
-    target = "vtk"
-}
