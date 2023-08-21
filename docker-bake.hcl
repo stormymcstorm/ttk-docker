@@ -13,10 +13,6 @@ target "vtk" {
     }
 }
 
-target "foo" {
-    
-}
-
 function "sterver" {
     params = [ver]
     result = replace(ver, ".", "_")
