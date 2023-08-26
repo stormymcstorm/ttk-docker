@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
       
     outputs:
-      vtk-target-matrix: ${{ steps.generate.outputs.vtk-target-matrix }}
-      ttk-target-matrix: ${{ steps.generate.outputs.ttk-target-matrix }}
-      vtk-python-target-matrix: ${{ steps.generate.outputs.vtk-python-target-matrix }}
-      ttk-python-target-matrix: ${{ steps.generate.outputs.ttk-python-target-matrix }}
+      vtk-target-matrix: ${{ steps.generate.outputs.VTK_TARGET_MATRIX }}
+      ttk-target-matrix: ${{ steps.generate.outputs.TTK_TARGET_MATRIX }}
+      vtk-python-target-matrix: ${{ steps.generate.outputs.VTK_PYTHON_TARGET_MATRIX }}
+      ttk-python-target-matrix: ${{ steps.generate.outputs.TTK_PYTHON_TARGET_MATRIX }}
 
     steps:
       - name: Checkout repository
@@ -29,14 +29,14 @@ jobs:
       - id: generate
         run: |
           echo "::debug::$(docker buildx bake --print)" 
-          VTK_TARGET_MATRIX=$(docker buildx bake vtk --print | node scripts/detect-build-targets.js)
-          echo "::set-output name=vtk-target-matrix::$VTK_TARGET_MATRIX"
-          TTK_TARGET_MATRIX=$(docker buildx bake ttk --print | node scripts/detect-build-targets.js)
-          echo "::set-output name=ttk-target-matrix::$TTK_TARGET_MATRIX"
-          VTK_PYTHON_TARGET_MATRIX=$(docker buildx bake vtk-python --print | node scripts/detect-build-targets.js)
-          echo "::set-output name=vtk-python-target-matrix::$VTK_PYTHON_TARGET_MATRIX"
-          TTK_PYTHON_TARGET_MATRIX=$(docker buildx bake ttk-python --print | node scripts/detect-build-targets.js)
-          echo "::set-output name=ttk-python-target-matrix::$TTK_PYTHON_TARGET_MATRIX"
+
+          echo "VTK_TARGET_MATRIX="$(docker buildx bake vtk --print | node scripts/detect-build-targets.js) >> "$GITHUB_OUTPUT"
+          
+          echo "TTK_TARGET_MATRIX="$(docker buildx bake ttk --print | node scripts/detect-build-targets.js) >> "$GITHUB_OUTPUT"
+
+          echo "VTK_PYTHON_TARGET_MATRIX="$(docker buildx bake vtk-python --print | node scripts/detect-build-targets.js) >> "$GITHUB_OUTPUT"
+
+          echo "TTK_PYTHON_TARGET_MATRIX="$(docker buildx bake ttk-python --print | node scripts/detect-build-targets.js) >> "$GITHUB_OUTPUT"
 
   vtk-build:
     needs: detect-build-targets
@@ -47,8 +47,108 @@ jobs:
       id-token: write
 
     strategy:
+      fail-fast: false
       matrix: 
         target: ${{ fromJson(needs.detect-build-targets.outputs.vtk-target-matrix) }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        uses: docker/bake-action@v3.1.0
+        with:
+          targets: ${{ matrix.target }}
+          push: true
+
+  ttk-build:
+    needs: [detect-build-targets, vtk-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix: 
+        target: ${{ fromJson(needs.detect-build-targets.outputs.ttk-target-matrix) }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        uses: docker/bake-action@v3.1.0
+        with:
+          targets: ${{ matrix.target }}
+          push: true
+
+  vtk-python-build:
+    needs: detect-build-targets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix: 
+        target: ${{ fromJson(needs.detect-build-targets.outputs.vtk-python-target-matrix) }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        uses: docker/bake-action@v3.1.0
+        with:
+          targets: ${{ matrix.target }}
+          push: true
+
+  ttk-python-build:
+    needs: [detect-build-targets, vtk-python-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix: 
+        target: ${{ fromJson(needs.detect-build-targets.outputs.ttk-python-target-matrix) }}
     
     steps:
       - name: Checkout repository
