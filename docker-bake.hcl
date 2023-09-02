@@ -31,7 +31,16 @@ variable "_latest_py" {
     default = "3.11"
 }
 
+target "base" {
+    labels = {
+        "org.opencontainers.image.licenses" = "MIT"
+        "org.opencontainers.image.source" = "https://github.com/stormymcstorm/ttk-docker"
+    }
+}
+
 target "vtk" {
+    inherits = ["base"]
+
     name = "vtk${format_ver(vtk_ver)}-${variant}"
     matrix = {
         vtk_ver = ["9.2.6", "9.3.0.rc1"]
@@ -54,6 +63,10 @@ target "vtk" {
             "${REGISTRY}/${NAMESPACE}/vtk:latest" : null),
     ])
 
+    labels = {
+        "org.opencontainers.image.description" = "Debian ${variant} based image containing VTK ${vtk_ver} installation"
+    }
+
     cache-to = REMOTE_CACHE ? [
         "type=registry,ref=${REGISTRY}/${NAMESPACE}/build-cache:vtk${vtk_ver}-${variant},mode=max"
     ] : []
@@ -64,8 +77,9 @@ target "vtk" {
 }
 
 target "ttk" {
-    name = "ttk${format_ver(ttk_ver)}-vtk${format_ver(vtk_ver)}-${variant}"
+    inherits = ["base"]
 
+    name = "ttk${format_ver(ttk_ver)}-vtk${format_ver(vtk_ver)}-${variant}"
     matrix = {
         ttk_ver = ["1.1.0", "1.2.0"]
         vtk_ver = ["9.2.6", "9.3.0.rc1"]
@@ -88,6 +102,10 @@ target "ttk" {
             "${REGISTRY}/${NAMESPACE}/ttk:latest" : null)
     ])
 
+    labels = {
+        "org.opencontainers.image.description" = "Debian ${variant} based image containing VTK ${vtk_ver} and TTK ${ttk_ver}"
+    }
+
     cache-to = REMOTE_CACHE ? [
         "type=registry,ref=${REGISTRY}/${NAMESPACE}/build-cache:ttk${ttk_ver}-vtk${vtk_ver}-${variant},mode=max"
     ] : []
@@ -99,6 +117,8 @@ target "ttk" {
 }
 
 target "vtk-python" {
+    inherits = ["base"]
+
     name = "vtk${format_ver(vtk_ver)}-py${format_ver(py_ver)}-${variant}"
     matrix = {
         py_ver = ["3.9", "3.11"]
@@ -120,6 +140,10 @@ target "vtk-python" {
             "${REGISTRY}/${NAMESPACE}/vtk-python:latest" : null),
     ])
 
+    labels = {
+        "org.opencontainers.image.description" = "Debian ${variant} based image containing VTK ${vtk_ver} and Python ${py_ver}"
+    }
+
     cache-to = REMOTE_CACHE ? [
         "type=registry,ref=${REGISTRY}/${NAMESPACE}/build-cache:vtk${vtk_ver}-py${py_ver}-${variant},mode=max"
     ] : []
@@ -130,6 +154,8 @@ target "vtk-python" {
 }
 
 target "ttk-python" {
+    inherits = ["base"]
+
     name = "ttk${format_ver(ttk_ver)}-vtk${format_ver(vtk_ver)}-py${format_ver(py_ver)}-${variant}"
     matrix = {
         py_ver = ["3.9", "3.11"]
@@ -152,6 +178,10 @@ target "ttk-python" {
         (variant == _latest_variant && ttk_ver == _latest_ttk && vtk_ver == _latest_vtk && py_ver == _latest_py ?
             "${REGISTRY}/${NAMESPACE}/ttk-python:latest" : null),
     ])
+
+    labels = {
+        "org.opencontainers.image.description" = "Debian ${variant} based image containing VTK ${vtk_ver}, TTK ${ttk_ver} and Python ${py_ver}"
+    }
 
     cache-to = REMOTE_CACHE ? [
         "type=registry,ref=${REGISTRY}/${NAMESPACE}/build-cache:ttk${ttk_ver}-vtk${vtk_ver}-py${py_ver}-${variant},mode=max"

@@ -1,0 +1,20 @@
+from setuptools import setup
+
+setup(
+    name='topologytoolkit',
+    version='${TTK_VERSION}',
+    author='TTK developers',
+    packages=[
+        'topologytoolkit',
+    ],
+    package_data={
+        'topologytoolkit': [
+            # Unix shared libraries.
+            '*.so*',
+            # Type information indicators
+            '*.typed',
+        ],
+    },
+    include_package_data=True,
+    zip_safe=False,
+)

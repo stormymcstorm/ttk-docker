@@ -27,6 +27,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         libosmesa6-dev \
         freeglut3-dev \
         libboost-system-dev \
+        gettext-base \
     && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 ################################################################################
@@ -66,6 +67,15 @@ RUN mkdir -p /build/vtk \
         ${VTK_BUILD_ARGS} \
     && cmake --build /build/vtk \
     && cmake --install /build/vtk
+
+COPY vtk/setup.py.in /build/vtk-wheel/setup.py.in
+
+RUN mkdir -p /dist/vtk-wheel \
+    && envsubst < /build/vtk-wheel/setup.py.in > /build/vtk-wheel/setup.py \
+    && cp /build/vtk/lib/python*/site-packages/vtk.py /build/vtk-wheel \
+    && cp -r /build/vtk/lib/python*/site-packages/vtkmodules /build/vtk-wheel \
+    && cd /build/vtk-wheel \
+    && python3 setup.py bdist_wheel --dist-dir /dist/vtk-wheel
 
 ################################################################################
 # BUILDER TTK
@@ -161,6 +171,15 @@ RUN mkdir -p /build/ttk \
   && cmake --build /build/ttk \
   && cmake --install /build/ttk
 
+COPY ttk/setup.py.in /build/ttk-wheel/setup.py.in
+
+RUN mkdir -p /dist/ttk-wheel \
+    && envsubst < /build/ttk-wheel/setup.py.in > /build/ttk-wheel/setup.py \
+    && cp -r /build/ttk/lib/python*/site-packages/topologytoolkit /build/ttk-wheel \
+    && cd /build/ttk-wheel \
+    && python3 setup.py bdist_wheel --dist-dir /dist/ttk-wheel
+
+
 ################################################################################
 # VTK PYTHON
 ################################################################################
@@ -184,12 +203,12 @@ COPY --from=builder-vtk /usr/local/share/vtk /usr/local/share/vtk
 # Copy python wrappers
 ARG PYTHON_VERSION
 
-COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules
-COPY --from=builder-vtk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py
+COPY --from=builder-vtk /dist/vtk-wheel /dist/vtk-wheel
+RUN pip install /dist/vtk-wheel/*.whl \
+    && rm -rf /dist
 
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PYTHON_VERSION}/site-packages/
+# Test install
+RUN python -c "import vtk"
 
 ################################################################################
 # TTK PYTHON
@@ -223,11 +242,11 @@ COPY --from=builder-ttk /usr/local/scripts/ttk /usr/local/scripts/ttk
 # Copy python wrappers
 ARG PYTHON_VERSION
 
-COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtkmodules
-COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/vtk.py
-COPY --from=builder-ttk /usr/local/lib/python${PYTHON_VERSION}/site-packages/topologytoolkit \
-  /usr/local/lib/python${PYTHON_VERSION}/site-packages/topologytoolkit
+COPY --from=builder-vtk /dist/vtk-wheel /dist/vtk-wheel
+COPY --from=builder-ttk /dist/ttk-wheel /dist/ttk-wheel
+RUN pip install /dist/vtk-wheel/*.whl \
+    && pip install /dist/ttk-wheel/*.whl \
+    && rm -rf /dist
 
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PYTHON_VERSION}/site-packages/
+# Test install
+RUN python -c "import vtk; import topologytoolkit"
