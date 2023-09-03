@@ -11,7 +11,7 @@ env:
 
 jobs:
   detect-build-targets:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
       
     outputs:
       vtk-target-matrix: ${{ steps.generate.outputs.VTK_TARGET_MATRIX }}
@@ -40,7 +40,7 @@ jobs:
 
   vtk-build:
     needs: detect-build-targets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       contents: read
       packages: write
@@ -76,7 +76,7 @@ jobs:
 
   ttk-build:
     needs: [detect-build-targets, vtk-build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       contents: read
       packages: write
@@ -112,7 +112,7 @@ jobs:
 
   vtk-python-build:
     needs: detect-build-targets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       contents: read
       packages: write
@@ -148,7 +148,7 @@ jobs:
 
   ttk-python-build:
     needs: [detect-build-targets, vtk-python-build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       contents: read
       packages: write
