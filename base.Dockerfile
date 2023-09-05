@@ -50,7 +50,7 @@ RUN VTK_VERSION_SHORT=$(echo ${VTK_VERSION} | cut -d. -f1-2) \
   && mkdir -p /src/vtk && cd /src/vtk \
   && curl -kL https://www.vtk.org/files/release/${VTK_VERSION_SHORT}/VTK-${VTK_VERSION}.tar.gz | tar zx --strip-components 1
 
-ARG VTK_BUILD_ARGS=-DVTK_USE_X=OFF -DVTK_BUILD_PYI_FILES=ON -DVTK_GROUP_ENABLE_Web:STRING=WANT
+ARG VTK_BUILD_ARGS="-DVTK_USE_X=OFF -DVTK_BUILD_PYI_FILES=ON -DVTK_GROUP_ENABLE_Web:STRING=WANT"
 
 # Build and install
 RUN mkdir -p /build/vtk \
@@ -119,7 +119,7 @@ COPY --from=builder-vtk /usr/local/share/licenses/VTK /usr/local/share/licenses/
 COPY --from=builder-vtk /usr/local/share/vtk /usr/local/share/vtk
 
 ARG TTK_VERSION=1.1.0
-ARG TTK_BUILD_ARGS=-DTTK_ENABLE_KAMIKAZE=ON -DTTK_ENABLE_DOUBLE_TEMPLATING=ON
+ARG TTK_BUILD_ARGS="-DTTK_ENABLE_KAMIKAZE=ON -DTTK_ENABLE_DOUBLE_TEMPLATING=ON"
 
 # Download sources
 RUN mkdir -p /src/ttk && cd /src/ttk \
